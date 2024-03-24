@@ -1,19 +1,48 @@
 #!/bin/bash
 # shellcheck disable=SC2164
 DESTDIR=$(realpath initramfs)
-function setup_files() {
-    install -d "${DESTDIR}"/{dev,etc/{modprobe.d,},new_root,proc,run,sys,tmp,usr/{lib,bin,local/{bin,lib,sbin}},var}
+KVER="6.7.6-arch1-2"
+MODDIR=$(realpath orig_initramfs)
 
+function create_symlinks() {
+    pushd "${DESTDIR}"
+
+    ln -s usr/lib lib
+    ln -s usr/lib lib64
+
+    pushd usr
+    ln -s lib lib64
+    ln -s bin sbin
+    popd
+
+    pushd var
+    ln -s ../run run
+    popd
+
+    popd
+
+}
+function setup_files() {
+    rm -rf "$DESTDIR"
+    install -d "${DESTDIR}"/{dev,etc/{modprobe.d,},new_root,proc,run,sys,tmp,usr/{lib/modules/"$KVER"/kernel/drivers/{block,fs,net/ethernet,input},bin,local/{bin,lib,sbin}},var}
     cp -rf upstream/* "${DESTDIR}"
+    chmod a+x -R "${DESTDIR}"/hooks
     cp config "${DESTDIR}"
-    # shellcheck disable=SC2164
+
+    # busybox install
     pushd "${DESTDIR}"
     busybox --install -s usr/bin
     unlink "${DESTDIR}"/usr/bin/busybox
     cp -rf /usr/bin/busybox "${DESTDIR}"/usr/bin
-    pushd usr/lib
-    ln -s lib lib64
-    popd
+
+    create_symlinks
+
+    # copy modules
+    cp -rf "$MODDIR"/usr/lib/modules/"$KVER"/kernel/drivers/net/ethernet/* "${DESTDIR}"/usr/lib/modules/"$KVER"/kernel/drivers/net/ethernet
+    cp -rf "$MODDIR"/lib/modules/"${KVER}"/kernel/drivers/block/loop.* "${DESTDIR}"/usr/lib/modules/"$KVER"/kernel/drivers/block
+    cp -rf "$MODDIR"/lib/modules/"${KVER}"/kernel/fs/squashfs "${DESTDIR}"/usr/lib/modules/"$KVER"/kernel/fs
+    cp -rf "$MODDIR"/lib/modules/"${KVER}"/kernel/fs/overlayfs "${DESTDIR}"/usr/lib/modules/"$KVER"/kernel/fs
+    cp -rf "$MODDIR"/lib/modules/"${KVER}"/kernel/drivers/input "${DESTDIR}"/usr/lib/modules/"$KVER"/kernel/drivers/input
     popd
 }
 
@@ -34,16 +63,23 @@ function build_ipconfig() {
     cp -rf /usr/lib64/ld-linux-x86-64.so.2 "$destdir"/usr/lib64
 }
 
-function copy_losetup(){
+function copy_utils() {
+    # losetup
     cp -rf /usr/bin/losetup "${DESTDIR}"/usr/bin
     cp -rf /usr/lib/libsmartcols.so* "${DESTDIR}"/usr/lib
-
 }
 
-function build(){
+function build() {
     pushd "$DESTDIR"
-    find . 2>/dev/null | cpio -o  -R root:root -H newc | xz -1 --format=lzma > ../initramfs-linux.img
+    find . 2>/dev/null | cpio -o -R root:root -H newc | xz -1 --format=lzma >../initramfs-linux.img
     popd
 }
 
-build
+function main() {
+    setup_files
+    build_ipconfig
+    copy_utils
+    build
+}
+
+main

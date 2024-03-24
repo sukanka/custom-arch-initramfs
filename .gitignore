@@ -5,3 +5,4 @@ orig_initramfs/*
 initramfs/*
 *.img
 vmlinuz-linux
+mnt/*
