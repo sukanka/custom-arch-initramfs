@@ -1,0 +1,7 @@
+output/*
+*.iso
+archlinux-x86_64/*
+orig_initramfs/*
+initramfs/*
+*.img
+vmlinuz-linux

@@ -1,0 +1,49 @@
+#!/bin/bash
+# shellcheck disable=SC2164
+DESTDIR=$(realpath initramfs)
+function setup_files() {
+    install -d "${DESTDIR}"/{dev,etc/{modprobe.d,},new_root,proc,run,sys,tmp,usr/{lib,bin,local/{bin,lib,sbin}},var}
+
+    cp -rf upstream/* "${DESTDIR}"
+    cp config "${DESTDIR}"
+    # shellcheck disable=SC2164
+    pushd "${DESTDIR}"
+    busybox --install -s usr/bin
+    unlink "${DESTDIR}"/usr/bin/busybox
+    cp -rf /usr/bin/busybox "${DESTDIR}"/usr/bin
+    pushd usr/lib
+    ln -s lib lib64
+    popd
+    popd
+}
+
+function build_ipconfig() {
+    local destdir
+    destdir="${DESTDIR}"
+    if [ ! -d mkinitcpio-nfs-utils ]; then
+        git clone https://gitlab.archlinux.org/archlinux/mkinitcpio/mkinitcpio-nfs-utils.git
+    else
+        pushd mkinitcpio-nfs-utils
+        git pull
+        popd
+    fi
+    pushd mkinitcpio-nfs-utils/ipconfig
+    make
+    install -Dm755 ipconfig "$destdir"/usr/bin/ipconfig
+    cp -rf /usr/lib/libc.so.6 "$destdir"/usr/lib
+    cp -rf /usr/lib64/ld-linux-x86-64.so.2 "$destdir"/usr/lib64
+}
+
+function copy_losetup(){
+    cp -rf /usr/bin/losetup "${DESTDIR}"/usr/bin
+    cp -rf /usr/lib/libsmartcols.so* "${DESTDIR}"/usr/lib
+
+}
+
+function build(){
+    pushd "$DESTDIR"
+    find . 2>/dev/null | cpio -o  -R root:root -H newc | xz -1 --format=lzma > ../initramfs-linux.img
+    popd
+}
+
+build

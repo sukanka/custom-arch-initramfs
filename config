@@ -1,0 +1,5 @@
+EARLYHOOKS=""
+HOOKS="archiso archiso_pxe_common archiso_pxe_http"
+LATEHOOKS="archiso_pxe_common"
+CLEANUPHOOKS=""
+EMERGENCYHOOKS=""
