@@ -12,7 +12,7 @@ _mnt_dmsnapshot() {
     local dm_snap_name="${dm_snap_prefix}_${img_name}"
     local ro_dev ro_dev_size rw_dev
 
-    ro_dev="$(losetup --find --show --read-only -- "${img}")"
+    ro_dev="$(/usr/bin/losetup --find --show --read-only -- "${img}")"
     ro_dev_size="$(blockdev --getsz "${ro_dev}")"
 
     if [ "${cow_persistent}" = "P" ]; then
@@ -31,7 +31,7 @@ _mnt_dmsnapshot() {
         truncate -s "${cow_spacesize}" "/run/archiso/cowspace/${cow_directory}/${img_name}.cow"
     fi
 
-    rw_dev="$(losetup --find --show "/run/archiso/cowspace/${cow_directory}/${img_name}.cow")"
+    rw_dev="$(/usr/bin/losetup --find --show "/run/archiso/cowspace/${cow_directory}/${img_name}.cow")"
 
     dmsetup create "${dm_snap_name}" --table \
         "0 ${ro_dev_size} snapshot ${ro_dev} ${rw_dev} ${cow_persistent} ${cow_chunksize}"
@@ -85,7 +85,7 @@ _mnt_fs() {
         img="/run/archiso/copytoram/${img_fullname}"
         msg "done."
     fi
-    img_loopdev="$(losetup --find --show --read-only -- "${img}")"
+    img_loopdev="$(/usr/bin/losetup --find --show --read-only -- "${img}")"
     _mnt_dev "${img_loopdev}" "${mnt}" "-r" "defaults"
 }
 
@@ -111,7 +111,8 @@ _mnt_dev() {
         'UUID='* | 'LABEL='* | 'PARTUUID='* | 'PARTLABEL='*) : ;;
         *) dev="${resolved_dev}" ;;
     esac
-    if mount --mkdir -o "${opts}" "${flg}" "${dev}" "${mnt}"; then
+    install -d "$mnt"
+    if mount  -o "${opts}" "${flg}" "${dev}" "${mnt}"; then
         msg ":: Device '${dev}' mounted successfully."
     else
         echo "ERROR; Failed to mount '${dev}'"
@@ -302,7 +303,8 @@ archiso_mount_handler() {
     fi
     if [ "${copytoram}" = "y" ]; then
         msg ":: Mounting /run/archiso/copytoram (tmpfs) filesystem, size=${copytoram_size}"
-        mount --mkdir -t tmpfs -o "size=${copytoram_size}",mode=0755 copytoram /run/archiso/copytoram
+        install -d /run/archiso/copytoram
+        mount -t tmpfs -o "size=${copytoram_size}",mode=0755 copytoram /run/archiso/copytoram
     fi
 
     if [ -n "${cow_device}" ]; then
@@ -312,7 +314,8 @@ archiso_mount_handler() {
         mount -o remount,rw "/run/archiso/cowspace"
     else
         msg ":: Mounting /run/archiso/cowspace (tmpfs) filesystem, size=${cow_spacesize}..."
-        mount --mkdir -t tmpfs -o "size=${cow_spacesize}",mode=0755 cowspace /run/archiso/cowspace
+        install -d /run/archiso/cowspace
+        mount -t tmpfs -o "size=${cow_spacesize}",mode=0755 cowspace /run/archiso/cowspace
     fi
     mkdir -p "/run/archiso/cowspace/${cow_directory}"
     chmod 0700 "/run/archiso/cowspace/${cow_directory}"

@@ -29,7 +29,8 @@ _curl_get() {
     msg ":: Downloading '${_url}'"
     # shellcheck disable=SC2154
     # defined via initcpio's parse_cmdline()
-    if ! curl -L -f -o "/run/archiso/httpspace/${archisobasedir}${_dst}/${_url##*/}" --create-dirs "${_url}"; then
+    install -d "/run/archiso/httpspace/${archisobasedir}${_dst}/"
+    if ! wget -O "/run/archiso/httpspace/${archisobasedir}${_dst}/${_url##*/}"  "${_url}"; then
         echo "ERROR: Downloading '${_url}'"
         echo "   Falling back to interactive prompt"
         echo "   You can try to fix the problem manually, log out when you are finished"
@@ -42,15 +43,12 @@ archiso_pxe_http_mount_handler() {
     local img_type="sfs"
 
     msg ":: Mounting /run/archiso/httpspace (tmpfs) filesystem, size='${archiso_http_spc}'"
-    mount --mkdir -t tmpfs -o size="${archiso_http_spc}",mode=0755 httpspace "/run/archiso/httpspace"
+    install -d "/run/archiso/httpspace"
+    mount  -t tmpfs -o size="${archiso_http_spc}",mode=0755 httpspace "/run/archiso/httpspace"
 
     # shellcheck disable=SC2154
     # defined via initcpio's parse_cmdline()
-    if ! curl -L -f -o /dev/null -s -r 0-0 "${archiso_http_srv}${archisobasedir}/${arch}/airootfs.sfs"; then
-        if curl -L -f -o /dev/null -s -r 0-0 "${archiso_http_srv}${archisobasedir}/${arch}/airootfs.erofs"; then
-            img_type="erofs"
-        fi
-    fi
+
     _curl_get "${archiso_http_srv}${archisobasedir}/${arch}/airootfs.${img_type}" "/${arch}"
 
     # shellcheck disable=SC2154
@@ -68,8 +66,8 @@ archiso_pxe_http_mount_handler() {
     if [ "${cms_verify}" = "y" ]; then
         _curl_get "${archiso_http_srv}${archisobasedir}/${arch}/airootfs.${img_type}.cms.sig" "/${arch}"
     fi
-
-    mount --mkdir -o bind /run/archiso/httpspace /run/archiso/bootmnt
+    install -d /run/archiso/bootmnt
+    mount -o bind /run/archiso/httpspace /run/archiso/bootmnt
 
     archiso_mount_handler "${newroot}"
 }

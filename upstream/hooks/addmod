@@ -1,0 +1,10 @@
+#!/usr/bin/ash
+#
+# SPDX-License-Identifier: Proprietary
+run_hook() {
+    local mods mod
+    mods="e1000 loop squashfs overlay"
+    for mod in ${mods}; do
+        modprobe "$mod"
+    done
+}
