@@ -65,8 +65,14 @@ function build_ipconfig() {
 
 function copy_utils() {
     # losetup
-    cp -rf /usr/bin/losetup "${DESTDIR}"/usr/bin
-    cp -rf /usr/lib/libsmartcols.so* "${DESTDIR}"/usr/lib
+    local -a utils
+    utils=(
+        '/usr/bin/losetup'
+    )
+    for util in "${utils[@]}"; do
+        lddtree --copy-to-tree "${DESTDIR}" "$util"
+    done
+
 }
 
 function build() {
